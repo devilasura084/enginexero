@@ -9,6 +9,8 @@ const ThreeScene: React.FC = () => {
   const gravity=0.001;
   const initialjumpspeed=0.1;
   const maxFallSpeed = 0.5;
+  const [isAutoMoving, setIsAutoMoving] = useState(false);
+  const autoMoveIntervalRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rotateleft = useRef<boolean>(false);
   const rotateright = useRef<boolean>(false);
@@ -55,7 +57,8 @@ const ThreeScene: React.FC = () => {
     scene.add(cube);
 
     camera.position.z = 5;
-
+  
+  
     const animate = () => {
       requestAnimationFrame(animate);
       if(rotateleft.current)
@@ -267,10 +270,45 @@ const ThreeScene: React.FC = () => {
         window.removeEventListener('resize', handleResize);
         window.removeEventListener('keydown',handlekeydown);
         window.removeEventListener('keyup',handleKeyup);
+        if (autoMoveIntervalRef.current) {
+          clearInterval(autoMoveIntervalRef.current);
+        }
       };
   }, []);
-
-  return <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />;
+  const simulateRandomKeypress = () => {
+    const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'a', 'd', 'w', 's', ' '];
+    const randomKey = keys[Math.floor(Math.random() * keys.length)];
+    const event = new KeyboardEvent('keydown', { key: randomKey });
+    window.dispatchEvent(event);
+  
+    // Simulate key release after a short delay
+    setTimeout(() => {
+      const releaseEvent = new KeyboardEvent('keyup', { key: randomKey });
+      window.dispatchEvent(releaseEvent);
+    }, Math.random() * 400 + 10); // Random duration between 100ms and 600ms
+  };
+  const toggleAutoMove = () => {
+    if (isAutoMoving) {
+      if (autoMoveIntervalRef.current) {
+        clearInterval(autoMoveIntervalRef.current);
+        autoMoveIntervalRef.current = null;
+      }
+    } else {
+      autoMoveIntervalRef.current = window.setInterval(() => {
+        simulateRandomKeypress();
+      }, 300); // Simulate a keypress every second
+    }
+    setIsAutoMoving(!isAutoMoving);
+  };
+  return (<>
+    <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+    <button 
+      onClick={toggleAutoMove} 
+      className='absolute right-10 top-10'
+    >
+      {isAutoMoving ? 'Stop Auto Move' : 'Start Auto Move'}
+    </button>
+  </>);
 };
 
 export default ThreeScene;
