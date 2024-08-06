@@ -5,8 +5,8 @@ const ThreeScene: React.FC = () => {
   const acceleration = 0.001; 
   const deceleration = 0.002; 
   const maxSpeed = 0.1; 
-  const maxjump=2;
-  const gravity=0.001;
+  const maxjump=10;
+  const gravity=0.002;
   const initialjumpspeed=0.1;
   const maxFallSpeed = 0.5;
   const [isAutoMoving, setIsAutoMoving] = useState(false);
@@ -36,31 +36,65 @@ const ThreeScene: React.FC = () => {
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const width = window.innerWidth/2;
+    const height = window.innerHeight/2;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current });
     renderer.setSize(width, height);
+    const particleCount = 1000;
+    const particles = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 10;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 10;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 10;
+    }
+    particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1 });
+    const particleSystem = new THREE.Points(particles, material);
+    scene.add(particleSystem);
+    const geometry = new THREE.BoxGeometry(0.9,0.9,0.9);
     const materials = [
-        new THREE.MeshBasicMaterial({ color: 0xff0000 }), // Red
-        new THREE.MeshBasicMaterial({ color: 0x00ff00 }), // Green
-        new THREE.MeshBasicMaterial({ color: 0x0000ff }), // Blue
-        new THREE.MeshBasicMaterial({ color: 0xffff00 }), // Yellow
-        new THREE.MeshBasicMaterial({ color: 0xff00ff }), // Magenta
-        new THREE.MeshBasicMaterial({ color: 0x00ffff }), // Cyan
-      ];
+      new THREE.MeshPhongMaterial({ color: 0xff0000 }), // Red
+      new THREE.MeshPhongMaterial({ color: 0x00ff00 }), // Green
+      new THREE.MeshPhongMaterial({ color: 0x0000ff }), // Blue
+      new THREE.MeshPhongMaterial({ color: 0xffff00 }), // Yellow
+      new THREE.MeshPhongMaterial({ color: 0xff00ff }), // Magenta
+      new THREE.MeshPhongMaterial({ color: 0x00ffff }), // Cyan
+    ];
     const cube = new THREE.Mesh(geometry, materials);
+    
     scene.add(cube);
-
+    scene.background = new THREE.Color(0x000000);
     camera.position.z = 5;
-  
-  
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+    directionalLight.position.set(1, 2, 2);
+    directionalLight.castShadow = true;
+    scene.add(directionalLight);
+    const ambientLight = new THREE.AmbientLight(0x444444); // Soft, grayish ambient light
+    scene.add(ambientLight);
+
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    cube.castShadow = true;
+    cube.receiveShadow = true;
+
+    const planeGeometry = new THREE.PlaneGeometry(100, 100);
+    const planeMaterial = new THREE.MeshPhongMaterial({   color: 0xffffff });
+    const plane = new THREE.Mesh(planeGeometry,   planeMaterial);
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.y = -1;
+    plane.receiveShadow = true;
+    scene.add(plane);
+    cube.position.y=-0.5;
+    
     const animate = () => {
       requestAnimationFrame(animate);
+      
       if(rotateleft.current)
       {
         leftSpeed.current=Math.min(leftSpeed.current+acceleration,maxSpeed);
@@ -175,8 +209,8 @@ const ThreeScene: React.FC = () => {
         }
         
         // Check if we've reached the ground
-        if (cube.position.y <= 0) {
-          cube.position.y = 0;
+        if (cube.position.y <= -0.5) {
+          cube.position.y = -0.5;
           isJumping.current = false;
           jumpspeed.current = 0;
         }
@@ -187,6 +221,15 @@ const ThreeScene: React.FC = () => {
           jumpspeed.current = 0;
         }
       }
+      for (let i = 0; i < particleCount; i++) {
+        positions[i * 3] += (Math.random() - 0.5) * 0.01;
+        positions[i * 3 + 1] += (Math.random() - 0.5) * 0.01;
+        positions[i * 3 + 2] += (Math.random() - 0.5) * 0.01;
+      }
+      particleSystem.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 4));
+      particleSystem.geometry.attributes.position.needsUpdate = true;
+
+      renderer.render(scene, camera);
       renderer.render(scene, camera);
     };
 
@@ -300,15 +343,15 @@ const ThreeScene: React.FC = () => {
     }
     setIsAutoMoving(!isAutoMoving);
   };
-  return (<>
-    <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+  return (<div className='w-full h-full flex items-center justify-center'>
+    <canvas ref={canvasRef}/>
     <button 
       onClick={toggleAutoMove} 
       className='absolute right-10 top-10'
     >
       {isAutoMoving ? 'Stop Auto Move' : 'Start Auto Move'}
     </button>
-  </>);
+  </div>);
 };
 
 export default ThreeScene;
